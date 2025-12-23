@@ -8,7 +8,7 @@ const User = require('../models/User');
 
 const app = express();
 
-// 1. ROBUST CORS (Keep as is, it's correct)
+// 1. ROBUST CORS
 app.use(cors({
   origin: "*", 
   methods: ["GET", "POST", "PATCH", "OPTIONS"],
@@ -16,7 +16,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// 2. SERVERLESS MONGODB CONNECTION (Keep as is, it's correct)
+// 2. SERVERLESS MONGODB CONNECTION
 let isConnected = false;
 const connectDB = async () => {
   if (isConnected) return;
@@ -36,14 +36,15 @@ app.use(async (req, res, next) => {
 
 // --- ROUTES ---
 
-// Change: Add a leading slash check or use a router to be safe.
-// To fix the 404, we define routes BOTH with and without the /api prefix 
-// or simply use the version that matches your fetch call exactly.
-
+// Root route
 app.get('/', (req, res) => res.send("🚀 LimitLess Auth API is Live"));
 
+// I have removed the "/api" prefix from inside the code.
+// Because your vercel.json handles the "/api" prefix, 
+// Express will see the path starting after "/api".
+
 // 1. Sign Up
-app.post('/api/register', async (req, res) => {
+app.post('/register', async (req, res) => {
   const { email, password } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -55,7 +56,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // 2. Login
-app.post('/api/login', async (req, res) => {
+app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -70,8 +71,8 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 3. Status Route
-app.get('/api/requests', async (req, res) => {
+// 3. Get All Requests
+app.get('/requests', async (req, res) => {
     try {
         const UserRequest = require('../models/UserRequest'); 
         const requests = await UserRequest.find().sort({ createdAt: -1 });
@@ -81,8 +82,7 @@ app.get('/api/requests', async (req, res) => {
     }
 });
 
-// 4. Create Resume Request (This was missing in your latest snippet!)
-// Ensure this matches your frontend fetch: https://.../api/request-resume
+// 4. Create Resume Request (Matches: /api/request-resume)
 app.post('/request-resume', async (req, res) => {
     try {
         const UserRequest = require('../models/UserRequest');
@@ -95,7 +95,8 @@ app.post('/request-resume', async (req, res) => {
     }
 });
 
-app.patch('/api/requests/:id', async (req, res) => {
+// 5. Update Status
+app.patch('/requests/:id', async (req, res) => {
     try {
         const UserRequest = require('../models/UserRequest');
         const { id } = req.params;
