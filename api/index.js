@@ -7,7 +7,11 @@ const UserRequest = require('../models/UserRequest');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "https://resume.sourabh.info/", // Put your real frontend URL here
+  methods: ["POST", "GET", "PATCH"],
+  credentials: true
+}));
 app.use(express.json());
 
 // 1. Connect to MongoDB Atlas
