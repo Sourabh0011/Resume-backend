@@ -4,13 +4,11 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-// Note: Multer disk storage won't work on Vercel. 
-// For production, use Cloudinary or AWS S3 for file uploads.
 const User = require('../models/User'); 
 
 const app = express();
 
-// 1. ROBUST CORS
+// 1. ROBUST CORS (Keep as is, it's correct)
 app.use(cors({
   origin: "*", 
   methods: ["GET", "POST", "PATCH", "OPTIONS"],
@@ -18,7 +16,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// 2. SERVERLESS MONGODB CONNECTION
+// 2. SERVERLESS MONGODB CONNECTION (Keep as is, it's correct)
 let isConnected = false;
 const connectDB = async () => {
   if (isConnected) return;
@@ -37,6 +35,10 @@ app.use(async (req, res, next) => {
 });
 
 // --- ROUTES ---
+
+// Change: Add a leading slash check or use a router to be safe.
+// To fix the 404, we define routes BOTH with and without the /api prefix 
+// or simply use the version that matches your fetch call exactly.
 
 app.get('/', (req, res) => res.send("🚀 LimitLess Auth API is Live"));
 
@@ -68,10 +70,9 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 3. Status Route (Replacing the old POST /api/request-resume logic)
+// 3. Status Route
 app.get('/api/requests', async (req, res) => {
     try {
-        // Assuming you are using your previous UserRequest model here
         const UserRequest = require('../models/UserRequest'); 
         const requests = await UserRequest.find().sort({ createdAt: -1 });
         res.status(200).json(requests);
@@ -80,7 +81,20 @@ app.get('/api/requests', async (req, res) => {
     }
 });
 
-// 4. Update Status (Mark as Sent)
+// 4. Create Resume Request (This was missing in your latest snippet!)
+// Ensure this matches your frontend fetch: https://.../api/request-resume
+app.post('/api/request-resume', async (req, res) => {
+    try {
+        const UserRequest = require('../models/UserRequest');
+        const { email, linkedinUrl } = req.body;
+        const newEntry = new UserRequest({ email, linkedinUrl, status: 'Pending' });
+        await newEntry.save();
+        res.status(200).json({ message: "Request saved!" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to save" });
+    }
+});
+
 app.patch('/api/requests/:id', async (req, res) => {
     try {
         const UserRequest = require('../models/UserRequest');
@@ -92,5 +106,4 @@ app.patch('/api/requests/:id', async (req, res) => {
     }
 });
 
-// EXPORT FOR VERCEL
 module.exports = app;
