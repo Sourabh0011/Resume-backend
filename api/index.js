@@ -6,22 +6,21 @@ const UserRequest = require('../models/UserRequest');
 
 const app = express();
 
-// 1. IMPROVED CORS CONFIGURATION
-// Since you are using a custom domain, explicitly allowing it is safer.
+// 1. ROBUST CORS FOR VERCEL
 app.use(cors({
   origin: "*", 
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["X-CSRF-Token", "X-Requested-With", "Accept", "Accept-Version", "Content-Length", "Content-MD5", "Content-Type", "Date", "X-Api-Version"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 
 app.use(express.json());
 
-// 2. MONGODB CONNECTION (Serverless Optimized)
-// In Vercel, we connect once and reuse the connection to avoid "too many connections" errors.
+// 2. SERVERLESS MONGODB CONNECTION
 let isConnected = false;
 const connectDB = async () => {
   if (isConnected) return;
   try {
+    // Note: process.env.MONGO_URI must be set in Vercel Dashboard
     const db = await mongoose.connect(process.env.MONGO_URI);
     isConnected = db.connections[0].readyState;
     console.log('✅ Connected to MongoDB Atlas');
@@ -30,49 +29,48 @@ const connectDB = async () => {
   }
 };
 
-// Middleware to ensure DB is connected before processing any request
+// Middleware to ensure DB is connected
 app.use(async (req, res, next) => {
   await connectDB();
   next();
 });
 
 // --- ROUTES ---
+// We remove the "/api" prefix inside the routes because 
+// vercel.json handles the "/api" routing for us.
 
-// Root route to verify API status
+// Root route 
 app.get('/', (req, res) => {
-  res.status(200).send("🚀 LimitLess API is Live and Connected");
+  res.status(200).send("🚀 LimitLess API is Live");
 });
 
 // A. Create New Request
-app.post('/api/request-resume', async (req, res) => {
+app.post('/request-resume', async (req, res) => {
     try {
         const { email, linkedinUrl } = req.body;
         if (!email || !linkedinUrl) {
-            return res.status(400).json({ error: "Email and LinkedIn URL are required" });
+            return res.status(400).json({ error: "Required fields missing" });
         }
-        
         const newEntry = new UserRequest({ email, linkedinUrl, status: 'Pending' });
         await newEntry.save();
-
-        res.status(200).json({ message: "Request saved to database!" });
+        res.status(200).json({ message: "Request saved!" });
     } catch (error) {
-        console.error("POST Error:", error);
-        res.status(500).json({ error: "Failed to save request" });
+        res.status(500).json({ error: error.message });
     }
 });
 
 // B. Get All Requests
-app.get('/api/requests', async (req, res) => {
+app.get('/requests', async (req, res) => {
     try {
         const requests = await UserRequest.find().sort({ createdAt: -1 });
         res.status(200).json(requests);
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch requests" });
+        res.status(500).json({ error: "Fetch failed" });
     }
 });
 
 // C. Update Status
-app.patch('/api/requests/:id', async (req, res) => {
+app.patch('/requests/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -83,9 +81,8 @@ app.patch('/api/requests/:id', async (req, res) => {
         );
         res.status(200).json(updatedRequest);
     } catch (error) {
-        res.status(500).json({ error: "Failed to update status" });
+        res.status(500).json({ error: "Update failed" });
     }
 });
 
-// Export the app for Vercel
 module.exports = app;
