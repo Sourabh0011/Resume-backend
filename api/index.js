@@ -83,7 +83,7 @@ app.get('/api/requests', async (req, res) => {
 
 // 4. Create Resume Request (This was missing in your latest snippet!)
 // Ensure this matches your frontend fetch: https://.../api/request-resume
-app.post('/api/request-resume', async (req, res) => {
+app.post('/request-resume', async (req, res) => {
     try {
         const UserRequest = require('../models/UserRequest');
         const { email, linkedinUrl } = req.body;
