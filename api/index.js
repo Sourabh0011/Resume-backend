@@ -6,44 +6,62 @@ const UserRequest = require('../models/UserRequest');
 
 const app = express();
 
-// Middleware
+// 1. IMPROVED CORS CONFIGURATION
+// Since you are using a custom domain, explicitly allowing it is safer.
 app.use(cors({
-  origin: "*", // This allows all websites to access the API - best for testing
+  origin: ["https://resume.sourabh.info", "https://resume-backend-umber.vercel.app"],
   methods: ["POST", "GET", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  credentials: true
 }));
+
 app.use(express.json());
 
-// 1. Connect to MongoDB Atlas
-const dbURI = process.env.MONGO_URI;
-if (!dbURI) {
-    console.error("❌ ERROR: MONGO_URI is missing in .env file.");
-    process.exit(1);
-}
+// 2. MONGODB CONNECTION (Serverless Optimized)
+// In Vercel, we connect once and reuse the connection to avoid "too many connections" errors.
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected) return;
+  try {
+    const db = await mongoose.connect(process.env.MONGO_URI);
+    isConnected = db.connections[0].readyState;
+    console.log('✅ Connected to MongoDB Atlas');
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:', err.message);
+  }
+};
 
-mongoose.connect(dbURI)
-    .then(() => console.log('✅ Connected to MongoDB Atlas'))
-    .catch(err => console.error('❌ MongoDB Error:', err.message));
+// Middleware to ensure DB is connected before processing any request
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // --- ROUTES ---
 
-// A. Create New Request (Called by Frontend Form)
+// Root route to verify API status
+app.get('/', (req, res) => {
+  res.status(200).send("🚀 LimitLess API is Live and Connected");
+});
+
+// A. Create New Request
 app.post('/api/request-resume', async (req, res) => {
     try {
         const { email, linkedinUrl } = req.body;
+        if (!email || !linkedinUrl) {
+            return res.status(400).json({ error: "Email and LinkedIn URL are required" });
+        }
         
-        // Save to Database - Status defaults to 'Pending'
         const newEntry = new UserRequest({ email, linkedinUrl, status: 'Pending' });
         await newEntry.save();
 
         res.status(200).json({ message: "Request saved to database!" });
     } catch (error) {
-        console.error(error);
+        console.error("POST Error:", error);
         res.status(500).json({ error: "Failed to save request" });
     }
 });
 
-// B. Get All Requests (For your Stylish Dashboard)
+// B. Get All Requests
 app.get('/api/requests', async (req, res) => {
     try {
         const requests = await UserRequest.find().sort({ createdAt: -1 });
@@ -53,7 +71,7 @@ app.get('/api/requests', async (req, res) => {
     }
 });
 
-// C. Update Status (To mark as "Sent" from the dashboard)
+// C. Update Status
 app.patch('/api/requests/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -69,5 +87,5 @@ app.patch('/api/requests/:id', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 5000;
+// Export the app for Vercel
 module.exports = app;
