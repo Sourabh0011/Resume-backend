@@ -9,9 +9,9 @@ const app = express();
 // 1. IMPROVED CORS CONFIGURATION
 // Since you are using a custom domain, explicitly allowing it is safer.
 app.use(cors({
-  origin: ["https://resume.sourabh.info", "https://resume-backend-umber.vercel.app"],
-  methods: ["POST", "GET", "PATCH", "OPTIONS"],
-  credentials: true
+  origin: "*", 
+  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["X-CSRF-Token", "X-Requested-With", "Accept", "Accept-Version", "Content-Length", "Content-MD5", "Content-Type", "Date", "X-Api-Version"]
 }));
 
 app.use(express.json());
