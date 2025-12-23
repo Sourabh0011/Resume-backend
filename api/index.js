@@ -8,9 +8,9 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: "https://resume.sourabh.info/", // Put your real frontend URL here
-  methods: ["POST", "GET", "PATCH"],
-  credentials: true
+  origin: "*", // This allows all websites to access the API - best for testing
+  methods: ["POST", "GET", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(express.json());
 
